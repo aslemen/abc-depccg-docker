@@ -1,0 +1,9 @@
+version: "2.3" 
+services:
+  abc-depccg:
+    build: ./abc-depccg
+    image: abc-depccg
+    runtime: nvidia # NOTE: version 3 does not support this option!
+    volumes:
+      - ~/abc-treebank:/root/treebank
+    tty: true
