@@ -17,10 +17,17 @@ RUN apt update \
     && rm -rf /var/lib/apt/lists/*
 
 ARG USE_OPENMP=1
-RUN pip3 install cython numpy cupy-cuda101 janome allennlp \
-    && pip3 install depccg
+RUN pip3 install --no-cache-dir \
+        cython numpy cupy-cuda101 janome allennlp \
+    && pip3 install --no-cache-dir depccg
 
-ADD https://phiz.c.u-tokyo.ac.jp/~hayashi/abc-depccg/lex-model-depccg-ja.tar.gz \
-        /root/lex-model-depccg-ja/
+ADD ./lex-model-depccg-ja.tar.gz /root/lex-model-depccg-ja
+ADD ./keyaki-treebank.tar.gz /root/treebank
+ADD ./vector-wikija.tar.bz2 /root/vector-wikija
+ADD ./supertagger.jsonnet /root/
+ADD ./script.py /usr/local/bin/run-train
+RUN chmod 755 /usr/local/bin/run-train
 
 ENV LC_ALL C.UTF-8
+
+ENTRYPOINT ["run-train"]

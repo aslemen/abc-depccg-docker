@@ -5,5 +5,6 @@ services:
     image: abc-depccg
     runtime: nvidia # NOTE: version 3 does not support this option!
     volumes:
-      - ~/abc-treebank:/root/treebank
+      - ~/res:/root/res
+      - .:/root/src
     tty: true
