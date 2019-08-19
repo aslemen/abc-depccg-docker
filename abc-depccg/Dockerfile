@@ -25,9 +25,9 @@ ADD ./lex-model-depccg-ja.tar.gz /root/lex-model-depccg-ja
 ADD ./keyaki-treebank.tar.gz /root/treebank
 ADD ./vector-wikija.tar.bz2 /root/vector-wikija
 ADD ./supertagger.jsonnet /root/
-ADD ./script.py /usr/local/bin/run-train
-RUN chmod 755 /usr/local/bin/run-train
+ADD ./script.py /usr/local/bin/train
+RUN chmod 755 /usr/local/bin/train
+ADD ./parser.py /usr/local/bin/parse
+RUN chmod 755 /usr/local/bin/parse
 
 ENV LC_ALL C.UTF-8
-
-ENTRYPOINT ["run-train"]

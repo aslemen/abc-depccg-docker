@@ -1,10 +1,19 @@
 version: "2.3" 
 services:
-  abc-depccg:
+  abc-depccg-train:
     build: ./abc-depccg
     image: abc-depccg
     runtime: nvidia # NOTE: version 3 does not support this option!
     volumes:
       - ~/res:/root/res
-      - .:/root/src
+    entrypoint:
+      - train
+  abc-depccg-parse:
+    build: ./abc-depccg
+    image: abc-depccg
+    runtime: nvidia
+    volumes: 
+      - ~/res:/root/res
     tty: true
+    command:
+      - parse
