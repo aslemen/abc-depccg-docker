@@ -86,7 +86,7 @@ def main(args):
     # 設定ファイルとallennlpのモデルからパーザを初期化
     parser = JapaneseCCGParser.from_json(
         args.model + "/config_parser_abc.json", 
-        args.model, 
+        args.model + "/model", 
         **kwargs
     )
 
@@ -127,15 +127,18 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser('A* CCG parser')
     parser.set_defaults(func=lambda _: parser.print_help())
 
-    parser.add_argument('-m',
-                        '--model',
-                        help='path to model directory')
+    parser.add_argument(
+        '-m',
+        '--model',
+        help='path to a model directory'
+    )
+
     parser.add_argument(
         '-i', '--input',
         type = typing.Union[str],
         default = None,
         help = "input to parse"
-        )
+    )
 
     parser.add_argument('--batchsize',
                         type=int,
