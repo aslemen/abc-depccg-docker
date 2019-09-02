@@ -167,7 +167,7 @@ if __name__ == "__main__":
     # ------
     # Constants
     # ------
-    DIR_TREEBANK: pathlib.Path = pathlib.Path("/root/treebank")
+    DIR_TREEBANK: pathlib.Path = pathlib.Path("/root/source/")
     """ 
         The path to the original treebank directory 
         in which data are dispersed in multiple files.
@@ -195,7 +195,7 @@ if __name__ == "__main__":
     # ------
     # 0. Construct the output folder
     # ------
-    DIR_RES: pathlib.Path = pathlib.Path("/root/res/")
+    DIR_RES: pathlib.Path = pathlib.Path("/root/result/")
 
     DIR_OUTPUT: pathlib.Path = DIR_RES / datetime.datetime.now().strftime("%Y%m%d%H%M%S")
 

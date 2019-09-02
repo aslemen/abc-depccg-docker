@@ -5,7 +5,8 @@ services:
     image: abc-depccg
     runtime: nvidia # NOTE: version 3 does not support this option!
     volumes:
-      - ~/res:/root/res
+      - ~/abc-depccg/source:/root/source
+      - ~/abc-depccg/result:/root/result
     entrypoint:
       - train
   abc-depccg-parse:
@@ -13,7 +14,7 @@ services:
     image: abc-depccg
     runtime: nvidia
     volumes: 
-      - ~/res:/root/res
+      - ~/abc-depccg/result:/root/result
     tty: true
     command:
       - parse

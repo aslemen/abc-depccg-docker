@@ -22,7 +22,6 @@ RUN pip3 install --no-cache-dir \
     && pip3 install --no-cache-dir depccg
 
 ADD ./lex-model-depccg-ja.tar.gz /root/lex-model-depccg-ja
-ADD ./keyaki-treebank.tar.gz /root/treebank
 ADD ./vector-wikija.tar.bz2 /root/vector-wikija
 ADD ./supertagger.jsonnet /root/
 ADD ./trainer.py /usr/local/bin/train
