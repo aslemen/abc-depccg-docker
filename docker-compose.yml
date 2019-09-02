@@ -16,5 +16,5 @@ services:
     volumes: 
       - ~/abc-depccg/result:/root/result
     tty: true
-    command:
-      - parse
+    #command:
+    # - parse

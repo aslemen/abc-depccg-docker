@@ -119,30 +119,36 @@ def mod_treebank(
     modder_settings.cat_freq_cut = 5
 
     # Do the digest
-    kr.TrainingDataCreator.create_traindata(
-        modder_settings,
-        mode = mode
-    )
-
-    # Add the list of categories to the modder settings
-    with open(dir_output / "target.txt") as h_target:
-        parser_settings["targets"] = list(
-            filter(
-                None,
-                map(parse_mod_target_line, h_target)
-            )
+    if mode == "train":
+        kr.TrainingDataCreator.create_traindata(
+            modder_settings,
         )
-    # === END WITH h_target ===            
-
-    # Add the list of unary rules to the modder settings
-    with open(dir_output / "unary_rules.txt") as h_unary:
-        parser_settings["unary_rules"] = list(
-            filter(
-                None,
-                map(parse_mod_unary_line, h_unary)
+        # Add the list of categories to the modder settings
+        with open(dir_output / "target.txt") as h_target:
+            modder_settings.targets = list(
+                filter(
+                    None,
+                    map(parse_mod_target_line, h_target)
+                )
             )
+        # === END WITH h_target ===            
+
+        # Add the list of unary rules to the modder settings
+        with open(dir_output / "unary_rules.txt" ) as h_unary:
+            modder_settings.unary_rules = list(
+                filter(
+                    None,
+                    map(parse_mod_unary_line, h_unary)
+                )
+            )
+        # === END WITH h_unary ===       
+    elif mode == "test":
+        kr.TrainingDataCreator.create_testdata(
+            modder_settings,
         )
-    # === END WITH h_unary ===       
+    else:
+        raise ValueError
+    # === END IF ===
 
     return modder_settings
 # === END ===
@@ -211,7 +217,7 @@ if __name__ == "__main__":
     DIR_OUTPUT_MODTREEBANK.mkdir()
 
     DIR_OUTPUT_WVECT: pathlib.Path = DIR_OUTPUT / "wvect"
-    DIR_OUTPUT_WVECT.mkdir()
+    # DIR_OUTPUT_WVECT.mkdir() # will be made later by shutil
 
     DIR_OUTPUT_MODEL: pathlib.Path = DIR_OUTPUT / "model"
     DIR_OUTPUT_MODEL.mkdir()
@@ -256,7 +262,7 @@ if __name__ == "__main__":
     DIR_OUTPUT_MODTREEBANK_ALL = DIR_OUTPUT_MODTREEBANK / "all"
     DIR_OUTPUT_MODTREEBANK_ALL.mkdir()
 
-    info_treebank_all: dict = mod_treebank(
+    info_treebank_all: ModderSettings = mod_treebank(
         DIR_OUTPUT_SOURCE / "all.psd",
         DIR_OUTPUT_MODTREEBANK_ALL,
         mode = "train"
@@ -265,7 +271,7 @@ if __name__ == "__main__":
     DIR_OUTPUT_MODTREEBANK_TRAIN = DIR_OUTPUT_MODTREEBANK / "train"
     DIR_OUTPUT_MODTREEBANK_TRAIN.mkdir()
 
-    info_treebank_train: dict = mod_treebank(
+    info_treebank_train: ModderSettings = mod_treebank(
         DIR_OUTPUT_SOURCE / "training.psd",
         DIR_OUTPUT_MODTREEBANK_TRAIN,
         mode = "train"
@@ -274,7 +280,7 @@ if __name__ == "__main__":
     DIR_OUTPUT_MODTREEBANK_TEST = DIR_OUTPUT_MODTREEBANK / "test"
     DIR_OUTPUT_MODTREEBANK_TEST.mkdir()
 
-    info_treebank_test: dict = mod_treebank(
+    info_treebank_test: ModderSettings = mod_treebank(
         DIR_OUTPUT_SOURCE / "testing.psd",
         DIR_OUTPUT_MODTREEBANK_TEST,
         mode = "test"
@@ -295,7 +301,7 @@ if __name__ == "__main__":
         mode = "w"
     ) as h_headtags:
         h_headtags.write("@@UNKNOWN@@\n")
-        for entry in info_treebank_all["parser_settings"]["targets"]:
+        for entry in info_treebank_all.targets:
             h_headtags.write(entry)
             h_headtags.write("\n")
         # === END FOR entry ===
@@ -325,23 +331,24 @@ if __name__ == "__main__":
     )
 
     # ------
-    # 5. Execute the trainer
-    # ------
-    allct.train_model(
-        params = trainer_settings,
-        serialization_dir = DIR_OUTPUT_MODEL
-    )
-
-    # ------
-    # 6. Dump parser settings
+    # 5. Dump parser settings
     # ------
     with open(
         DIR_OUTPUT / "config_parser_abc.json",
         "w+"
     ) as h_parserconf:
         json.dump(
-            info_treebank_train["parser_settings"],
-            h_parserconf
+            vars(info_treebank_train),
+            h_parserconf,
+            default = str
         )
     # === END WITH ===
+
+    # ------
+    # 6. Execute the trainer
+    # ------
+    allct.train_model(
+        params = trainer_settings,
+        serialization_dir = DIR_OUTPUT_MODEL
+    )
 # === END IF ===
