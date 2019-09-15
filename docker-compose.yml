@@ -15,6 +15,7 @@ services:
     runtime: nvidia
     volumes: 
       - ~/abc-depccg/result:/root/result
+    stdin_open: true
     tty: true
-    #command:
-    # - parse
+    entrypoint:
+      - parse
