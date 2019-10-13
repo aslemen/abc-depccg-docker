@@ -13,13 +13,14 @@ RUN apt update \
         python3-wheel \
         python3-setuptools \
         python3-pip \
+        git \
     && apt clean \
     && rm -rf /var/lib/apt/lists/*
 
 ARG USE_OPENMP=1
 RUN pip3 install --no-cache-dir \
-        cython numpy cupy-cuda101 janome allennlp \
-    && pip3 install --no-cache-dir depccg
+        parsy cython numpy cupy-cuda101 janome allennlp \
+    && pip3 install --no-cache-dir git+https://github.com/masashi-y/depccg
 
 ADD ./lex-model-depccg-ja.tar.gz /root/lex-model-depccg-ja
 ADD ./vector-wikija.tar.bz2 /root/vector-wikija
