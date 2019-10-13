@@ -5,10 +5,11 @@ import typing
 import argparse
 import sys
 import json
+import parsy
 
 from depccg.parser import JapaneseCCGParser
 from depccg.printer import print_
-from depccg.token import japanese_annotator, annotate_XX
+from depccg.tokens import japanese_annotator, annotate_XX
 from depccg.combinator import (headfinal_combinator,
                                ja_forward_application,
                                ja_backward_application,
@@ -21,13 +22,136 @@ from depccg.combinator import (headfinal_combinator,
                                ja_generalized_forward_composition1,
                                ja_generalized_forward_composition2)
 
+pCAT_BASE_trans_table = (
+    str.maketrans(
+        {
+            "[": "",
+            "]": ""    
+        }
+    )
+)
 
+@parsy.generate
+def pCAT_BASE():
+    cat = yield parsy.regex(r"[^()\\/]+")
+
+    return {
+        "type": "BASE",
+        "lit": cat.translate(pCAT_BASE_trans_table)
+    }
+# === END ===
+
+@parsy.generate
+def pCAT_COMP_LEFT():
+    cat1 = yield pCAT_COMP_RIGHT 
+    cat_others = yield (
+        parsy.match_item("\\") 
+        >> (
+             pCAT_COMP_RIGHT
+        )
+    ).many()
+
+    res = cat1
+    for cat_next in cat_others:
+        res = {
+            "type": "L",
+            "antecedent": cat_next,
+            "consequence": res,
+        }
+    return res
+# === END ===
+
+@parsy.generate
+def pCAT_COMP_RIGHT():
+    cat1 = yield pCAT_BASE | pCAT_PAR
+    cat_others = yield (
+        parsy.match_item("/") 
+        >> (pCAT_BASE | pCAT_PAR)
+    ).many()
+
+    res = cat1
+    for cat_next in cat_others:
+        res = {
+            "type": "R",
+            "antecedent": cat_next,
+            "consequence": res,
+        }
+    return res
+# === END ===
+
+@parsy.generate
+def pCAT_PAR():
+    yield parsy.match_item("(")
+    cat = yield pCAT
+    yield parsy.match_item(")")
+
+    return cat
+# === END ===
+
+pCAT = pCAT_COMP_LEFT 
+
+def parse_cat(text: str) -> dict:
+    return pCAT.parse(text)
+# === END ===
+
+def translate_cat_TLG(cat: dict) -> str:
+    input_type = cat["type"]
+    if input_type == "L":
+        return f"<{cat['antecedent']}\{cat['consequence']}>"
+    elif input_type == "R":
+        return f"<{cat['consequence']}/{cat['antecedent']}"
+    else:
+        return cat["lit"]
+    # === END IF ===
+# === END ===
+
+def parse_cat_translate_TLG(text: str) -> str:
+    return translate_cat_TLG(parse_cat(text))
+# === END ===
+
+def parse_cat(text: str) -> dict:
+    return pCAT.parse(text)
+# === END ===
+
+def translate_cat_TLG(cat: dict) -> str:
+    input_type = cat["type"]
+    if input_type == "L":
+        return f"<{translate_cat_TLG(cat['antecedent'])}\{translate_cat_TLG(cat['consequence'])}>"
+    elif input_type == "R":
+        return f"<{translate_cat_TLG(cat['consequence'])}/{translate_cat_TLG(cat['antecedent'])}"
+    else:
+        return cat["lit"]
+    # === END IF ===
+# === END ===
+
+def parse_cat_translate_TLG(text: str):
+    return translate_cat_TLG(parse_cat(text))
+# === END ===
+
+def dump_tree_ABCT(tree: dict, stream: typing.TextIO) -> typing.NoReturn:
+    cat = parse_cat_translate_TLG(tree["cat"])
+
+    if "children" in tree.keys():
+        stream.write(f"({cat}")
+
+        for child in tree["children"]:
+            stream.write(" ")
+            dump_tree_ABCT(child, stream)
+        # === END FOR child ===
+
+        stream.write(")")
+    else:
+        stream.write(
+            f"({cat} {tree['surf']})"
+        )
+    # === END IF ===
+# === END ===
 
 def main(args):
     # 使う組み合わせ規則 headfinal_combinatorでくるんでください。
     binary_rules = [
-        headfinal_combinator(ja_forward_application()),         # 順方向関数適用
-        headfinal_combinator(ja_backward_application()),        # 逆方向関数適用
+        headfinal_combinator(ja_forward_application()),# 順方向関数適用
+        headfinal_combinator(ja_backward_application()),# 逆方向関数適用
         headfinal_combinator(
             ja_generalized_forward_composition0(
                 '/', '/', '/', '>B'
@@ -118,10 +242,37 @@ def main(args):
     # === END IF ===
 
     # 解析
-    res = parser.parse_doc(doc, batchsize=args.batchsize)
-    
+    parsed_trees = parser.parse_doc(doc, batchsize=args.batchsize)
+        
     # 木を出力
-    print_(res, tagged_doc, format=args.format, lang='ja')
+    if args.format == "abct":
+        parsed_trees_formatted_list = []
+
+        for i, (parsed, tokens) in enumerate(zip(parsed_trees, tagged_doc), 1):
+            for tree, prob in parsed:
+                tree_enh = {
+                    "type": "ROOT",
+                    "cat": "TOP",
+                    "children": [
+                        {
+                            "cat": "COMMENT",
+                            "surf": f"{{probability={prob}}}"
+                        },
+                        tree.json(tokens = tokens),
+                        {
+                            "cat": "ID",
+                            "surf": str(i)
+                        }
+                    ]
+                }
+                dump_tree_ABCT(tree_enh, sys.stdout)
+                sys.stdout.write("\n")
+            # === END FOR ===
+        # === END FOR ===
+    else:
+        print_(parsed_trees, tagged_doc, format=args.format, lang='ja')
+    # === END IF ===
+# === END ===
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('A* CCG parser')
@@ -146,8 +297,8 @@ if __name__ == '__main__':
                         help='batchsize in supertagger')
     parser.add_argument('-f',
                         '--format',
-                        default='auto',
-                        choices=['auto', 'deriv', 'xml', 'conll', 'html', 'prolog', 'jigg_xml', 'ptb', 'json'],
+                        default='abct',
+                        choices=["abct", 'auto', 'deriv', 'xml', 'conll', 'html', 'prolog', 'jigg_xml', 'ptb', 'json'],
                         help='output format')
     parser.add_argument('--tokenize',
                         action='store_true',
