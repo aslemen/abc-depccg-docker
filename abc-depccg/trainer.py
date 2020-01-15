@@ -144,7 +144,7 @@ def generate_category(head: str, args: typing.List[str], is_bracketed = False) -
     # === END IF ===
 # === END ===
 
-@functools.lru_cache
+@functools.lru_cache()
 def gen_unary_rules() -> typing.List[typing.Tuple[str, str]]:
     res = []
 
