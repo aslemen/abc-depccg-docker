@@ -217,6 +217,7 @@ def main(args):
     # 入力の文を読む
     doc: typing.List[typing.List[str]]
     if args.input is None:
+        # --input オプションが指定されていない場合，標準入力から文を読み込む
         doc = list(
             filter(
                 None,
@@ -224,6 +225,7 @@ def main(args):
             )
         )
     else:
+        # --input オプションが指定されている場合，それの引数である文字列を読み込む
         doc = list(
             filter(
                 None,

@@ -2,6 +2,8 @@
 import typing
 import io
 import random
+import itertools
+import functools
 
 import os
 import shutil
@@ -74,7 +76,7 @@ def parse_mod_unary_line(line: str) -> typing.List[str]:
         Returns
         -------
         unary_rule : typing.List[str]
-            A pair of categories which represents a permiited unary branching.
+            A pair of categories which represents a permitted unary branching.
             The upper node goes to the first element of the list
             and the lower node to the second one.
             A empty list is returned 
@@ -87,6 +89,195 @@ def parse_mod_unary_line(line: str) -> typing.List[str]:
     else:
         return entry_tokens[0:2]
     # === END IF ===
+# === END ===
+
+CAT_CLAUSES: typing.Set[str] = {
+    "S", "S[m]", "S[a]", "S[e]", "S[sub]", 
+    "S[imp]", "S[smc]", "S[nml]", "S[rel]",
+    "CP[t]", "CP[q]", "CP[x]", "CP[f]", "multi-sentence"
+}
+
+CAT_PPS : typing.Set[str] = {
+    "PP[s]", "PP[s2]", "PP[o1]", "PP[o2]"
+}
+
+CAT_NPS: typing.Set[str] = {
+    "NP", "QP", "DP"
+}
+
+CAT_PP_LISTS_ORTHODOX_PL: typing.Set[typing.List[str]] = {
+    ("PP[s2]", "PP[s]",) ,
+    
+    ("PP[o1]", "PP[s]"),
+    ("PP[o1]", "PP[s2]", "PP[s]"),
+
+    ("PP[o2]", "PP[o1]", "PP[s]"),
+    ("PP[o2]", "PP[o1]", "PP[s2]", "PP[s]"),
+
+    ("CP[t]", "PP[o1]", "PP[s]"),
+    ("CP[t]", "PP[o1]", "PP[s2]", "PP[s]"),
+}
+    
+CAT_PP_LISTS_ORTHODOX = CAT_PP_LISTS_ORTHODOX_PL | {("PP[s]", )}
+CAT_PP_LISTS_ORTHODOX_WITHZERO = CAT_PP_LISTS_ORTHODOX | {tuple()}
+
+CAT_PP_LISTS_SCRAMBLED: typing.Dict[tuple, typing.Set[tuple]] = {
+    ortho:(
+        set(
+            itertools.permutations(ortho)
+        ).difference(ortho)
+    )
+    for ortho in CAT_PP_LISTS_ORTHODOX_PL
+}
+
+    
+def generate_category(head: str, args: typing.List[str], is_bracketed = False) -> str:
+    if args:
+        return "{br_open}{others}\\{arg}{br_close}".format(
+            br_open = "(" if is_bracketed else "",
+            br_close = ")" if is_bracketed else "",
+            arg = args[0],
+            others = generate_category(head, args[1:], True)
+        )
+    else:
+        return head
+    # === END IF ===
+# === END ===
+
+@functools.lru_cache
+def gen_unary_rules() -> typing.List[typing.Tuple[str, str]]:
+    res = []
+
+    # ======
+    # Scramblings
+    # ======
+
+    for ortho, scrs in CAT_PP_LISTS_SCRAMBLED.items():
+        res.extend(
+            (
+                generate_category(cl, ortho),
+                generate_category(cl, scr)
+            )
+            for scr in scrs
+            for cl in CAT_CLAUSES
+        )
+
+    # ======
+    # Covert pronominals
+    # ======
+
+    res.extend(
+        (
+            generate_category(cl, args[1:]),
+            generate_category(cl, args)
+        )
+        for args in CAT_PP_LISTS_ORTHODOX
+        for cl in CAT_CLAUSES
+    )
+
+    # ======
+    # Adnominal clauses
+    # ======
+    res.extend(
+        (
+            f"{np}/{np}",
+            generate_category("S[rel]", (arg, ))
+        )
+        for arg in CAT_PPS
+        for np in CAT_NPS
+    )
+
+    # =====
+    # Adverbial clauses
+    # ======
+    for cl, args in itertools.product(
+            CAT_CLAUSES, 
+            CAT_PP_LISTS_ORTHODOX_WITHZERO
+    ):
+        pred: str = generate_category(cl, args, is_bracketed = True)
+
+        # Full
+        res.append(
+            (
+                f"{pred}/{pred}",
+                "S[a]"
+            )
+        )
+
+        # Controlled
+        res.append(
+            (
+                f"{pred}/{pred}",
+                "S[a]\\PP[s]"
+            )
+        )
+    # === END FOR ===
+
+    # =====
+    # Nominal Predicates
+    # ======
+    res.extend(
+        (
+            f"{cl}\\PP[s]",
+            np
+        )
+        for cl in CAT_CLAUSES
+        for np in CAT_NPS
+    )
+    # == END FOR ===
+
+    # =====
+    # Caseless DPs
+    # ======
+    for pp in CAT_PPS:
+        res.append(
+            (pp, "DP")
+        )
+    # === END FOR ===
+
+
+    # ======
+    # Other rules
+    # ======
+
+    res.extend(
+        (
+            ("DP", "NP"), # Covert Determiner
+            ("DP", "QP"), # Covert Determiner
+
+            ("CP[q]", "S[sub]"), # Covert question marker
+
+            # Admoninal NPs??
+            # ("NP/NP", "NP"), 
+            ("NP/NP", "DP"), 
+            ("NP/NP", "QP"), 
+
+            # Adverbial NPs  (frequent ones only)
+            # e.g. きょう，昨日
+            # ("(S[m]\\PP[s])/(S[m]\\PP[s])", "NP"),
+            # ("(S[sub]\\PP[s])/(S[sub]\\PP[s])", "NP"),
+            ("(S[m]\\PP[s])/(S[m]\\PP[s])", "DP"),
+            ("(S[e]\\PP[s])/(S[e]\\PP[s])", "DP"),
+            ("(S[a]\\PP[s])/(S[a]\\PP[s])", "DP"),
+            ("(S[rel]\\PP[s])/(S[rel]\\PP[s])", "DP"),
+            ("(CP[f]\\PP[s])/(CP[f]\\PP[s])", "DP"),
+            ("S[sub]/S[sub]", "DP"),
+            ("S[a]/S[a]", "DP"),
+
+            # Adverbial QPs
+            ("(S[m]\\PP[s])/(S[m]\\PP[s])", "QP"),
+            ("(S[a]\\PP[s])/(S[a]\\PP[s])", "QP"),
+            ("S[m]/S[m]", "QP"),
+
+            # Peculiar Srel
+            ("NP/NP", "S[rel]"),
+
+            # single NUM
+            ("QP", "NUM"), 
+        )
+    )
+
+    return res
 # === END ===
 
 def mod_treebank(
@@ -134,14 +325,8 @@ def mod_treebank(
         # === END WITH h_target ===            
 
         # Add the list of unary rules to the modder settings
-        with open(dir_output / "unary_rules.txt" ) as h_unary:
-            modder_settings.unary_rules = list(
-                filter(
-                    None,
-                    map(parse_mod_unary_line, h_unary)
-                )
-            )
-        # === END WITH h_unary ===       
+
+        modder_settings.unary_rules = gen_unary_rules()
     elif mode == "test":
         kr.TrainingDataCreator.create_testdata(
             modder_settings,
