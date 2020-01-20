@@ -118,7 +118,7 @@ def translate_cat_TLG(cat: dict) -> str:
     if input_type == "L":
         return f"<{translate_cat_TLG(cat['antecedent'])}\{translate_cat_TLG(cat['consequence'])}>"
     elif input_type == "R":
-        return f"<{translate_cat_TLG(cat['consequence'])}/{translate_cat_TLG(cat['antecedent'])}"
+        return f"<{translate_cat_TLG(cat['consequence'])}/{translate_cat_TLG(cat['antecedent'])}>"
     else:
         return cat["lit"]
     # === END IF ===
@@ -141,9 +141,18 @@ def dump_tree_ABCT(tree: dict, stream: typing.TextIO) -> typing.NoReturn:
 
         stream.write(")")
     else:
-        stream.write(
-            f"({cat} {tree['surf']})"
-        )
+        if "surf" in tree:
+            stream.write(
+                f"({cat} {tree['surf']})"
+            )
+        elif "word" in tree:
+            stream.write(
+                f"({cat} {tree['word']})"
+            )
+        else:
+            strem.write(
+                f"({cat} ERROR)"
+            )
     # === END IF ===
 # === END ===
 
