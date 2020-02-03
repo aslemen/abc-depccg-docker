@@ -11,12 +11,6 @@ import pathlib
 import datetime
 import json
 
-import depccg.tools.ja.keyaki_reader as kr
-import allennlp.common.params as allp
-import allennlp.common.util as allu
-import allennlp.commands.train as allct
-allu.import_submodules("depccg.models.my_allennlp")
-
 # ======
 # Data Types
 # ======
@@ -285,6 +279,8 @@ def mod_treebank(
     dir_output: pathlib.Path,
     mode: str
 ) -> ModderSettings:
+    import depccg.tools.ja.keyaki_reader as kr
+
     """
         Digest a raw treebank file via `depccg.tools.ja.keyaki_reader` and 
         dump the results to the designated output folder.
@@ -354,7 +350,10 @@ def get_rand() -> float:
 # Main Procedure
 # ======
 if __name__ == "__main__":
-
+    import allennlp.common.params as allp
+    import allennlp.common.util as allu
+    import allennlp.commands.train as allct
+    allu.import_submodules("depccg.models.my_allennlp")
     # ------
     # Constants
     # ------
