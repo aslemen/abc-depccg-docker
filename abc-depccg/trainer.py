@@ -71,8 +71,8 @@ def parse_mod_unary_line(line: str) -> typing.List[str]:
         -------
         unary_rule : typing.List[str]
             A pair of categories which represents a permitted unary branching.
-            The upper node goes to the first element of the list
-            and the lower node to the second one.
+            The upper node goes to the second element of the list
+            and the lower node to the first one.
             A empty list is returned 
             if the given line fails to represent a unary rule.
     """
@@ -119,12 +119,11 @@ CAT_PP_LISTS_SCRAMBLED: typing.Dict[tuple, typing.Set[tuple]] = {
     ortho:(
         set(
             itertools.permutations(ortho)
-        ).difference(ortho)
+        ).difference({ortho})
     )
     for ortho in CAT_PP_LISTS_ORTHODOX_PL
 }
 
-    
 def generate_category(head: str, args: typing.List[str], is_bracketed = False) -> str:
     if args:
         return "{br_open}{others}\\{arg}{br_close}".format(
@@ -140,6 +139,18 @@ def generate_category(head: str, args: typing.List[str], is_bracketed = False) -
 
 @functools.lru_cache()
 def gen_unary_rules() -> typing.List[typing.Tuple[str, str]]:
+    """
+        Generate all the unary rules for the ABC Treebank.
+
+        Returns
+        -------
+        unary_rules : typing.List[typing.Tuple[str, str]]
+            A list of pairs of 
+                categories which represents a permitted unary branching.
+            Upper nodes are the second elements of the pairs
+                and lower nodes are the first elements.
+    """
+
     res = []
 
     # ======
@@ -149,8 +160,8 @@ def gen_unary_rules() -> typing.List[typing.Tuple[str, str]]:
     for ortho, scrs in CAT_PP_LISTS_SCRAMBLED.items():
         res.extend(
             (
-                generate_category(cl, ortho),
-                generate_category(cl, scr)
+                generate_category(cl, ortho), # inner 
+                generate_category(cl, scr)    # outer
             )
             for scr in scrs
             for cl in CAT_CLAUSES
@@ -162,8 +173,8 @@ def gen_unary_rules() -> typing.List[typing.Tuple[str, str]]:
 
     res.extend(
         (
-            generate_category(cl, args[1:]),
-            generate_category(cl, args)
+            generate_category(cl, args),    # inner 
+            generate_category(cl, args[1:]) # outer
         )
         for args in CAT_PP_LISTS_ORTHODOX
         for cl in CAT_CLAUSES
@@ -174,8 +185,8 @@ def gen_unary_rules() -> typing.List[typing.Tuple[str, str]]:
     # ======
     res.extend(
         (
-            f"{np}/{np}",
-            generate_category("S[rel]", (arg, ))
+            generate_category("S[rel]", (arg, )), # inner
+            f"{np}/{np}",                         # outer
         )
         for arg in CAT_PPS
         for np in CAT_NPS
@@ -193,16 +204,16 @@ def gen_unary_rules() -> typing.List[typing.Tuple[str, str]]:
         # Full
         res.append(
             (
-                f"{pred}/{pred}",
-                "S[a]"
+                "S[a]",            # inner
+                f"{pred}/{pred}", # outer
             )
         )
 
         # Controlled
         res.append(
             (
-                f"{pred}/{pred}",
-                "S[a]\\PP[s]"
+                "S[a]\\PP[s]",    # inner
+                f"{pred}/{pred}", # outer
             )
         )
     # === END FOR ===
@@ -212,8 +223,8 @@ def gen_unary_rules() -> typing.List[typing.Tuple[str, str]]:
     # ======
     res.extend(
         (
-            f"{cl}\\PP[s]",
-            np
+            np,             # inner
+            f"{cl}\\PP[s]", # outer
         )
         for cl in CAT_CLAUSES
         for np in CAT_NPS
@@ -225,7 +236,10 @@ def gen_unary_rules() -> typing.List[typing.Tuple[str, str]]:
     # ======
     for pp in CAT_PPS:
         res.append(
-            (pp, "DP")
+            (
+                "DP", # inner
+                pp,   # outer
+            )
         )
     # === END FOR ===
 
@@ -236,38 +250,38 @@ def gen_unary_rules() -> typing.List[typing.Tuple[str, str]]:
 
     res.extend(
         (
-            ("DP", "NP"), # Covert Determiner
-            ("DP", "QP"), # Covert Determiner
+            ("NP", "DP"), # Covert Determiner
+            ("QP", "DP"), # Covert Determiner
 
-            ("CP[q]", "S[sub]"), # Covert question marker
+            ("S[sub]", "CP[q]", ), # Covert question marker
 
             # Admoninal NPs??
             # ("NP/NP", "NP"), 
-            ("NP/NP", "DP"), 
-            ("NP/NP", "QP"), 
+            ("DP", "NP/NP", ), 
+            ("QP", "NP/NP", ), 
 
             # Adverbial NPs  (frequent ones only)
             # e.g. きょう，昨日
             # ("(S[m]\\PP[s])/(S[m]\\PP[s])", "NP"),
             # ("(S[sub]\\PP[s])/(S[sub]\\PP[s])", "NP"),
-            ("(S[m]\\PP[s])/(S[m]\\PP[s])", "DP"),
-            ("(S[e]\\PP[s])/(S[e]\\PP[s])", "DP"),
-            ("(S[a]\\PP[s])/(S[a]\\PP[s])", "DP"),
-            ("(S[rel]\\PP[s])/(S[rel]\\PP[s])", "DP"),
-            ("(CP[f]\\PP[s])/(CP[f]\\PP[s])", "DP"),
-            ("S[sub]/S[sub]", "DP"),
-            ("S[a]/S[a]", "DP"),
+            ("DP", "(S[m]\\PP[s])/(S[m]\\PP[s])", ),
+            ("DP", "(S[e]\\PP[s])/(S[e]\\PP[s])", ),
+            ("DP", "(S[a]\\PP[s])/(S[a]\\PP[s])", ),
+            ("DP", "(S[rel]\\PP[s])/(S[rel]\\PP[s])", ),
+            ("DP", "(CP[f]\\PP[s])/(CP[f]\\PP[s])", ),
+            ("DP", "S[sub]/S[sub]", ),
+            ("DP", "S[a]/S[a]", ),
 
             # Adverbial QPs
-            ("(S[m]\\PP[s])/(S[m]\\PP[s])", "QP"),
-            ("(S[a]\\PP[s])/(S[a]\\PP[s])", "QP"),
-            ("S[m]/S[m]", "QP"),
+            ("QP", "(S[m]\\PP[s])/(S[m]\\PP[s])", ),
+            ("QP", "(S[a]\\PP[s])/(S[a]\\PP[s])", ),
+            ("QP", "S[m]/S[m]", ),
 
             # Peculiar Srel
-            ("NP/NP", "S[rel]"),
+            ("S[rel]", "NP/NP", ),
 
             # single NUM
-            ("QP", "NUM"), 
+            ("NUM", "QP", ), 
         )
     )
 
