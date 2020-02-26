@@ -10,7 +10,7 @@ import pathlib
 
 from depccg.parser import JapaneseCCGParser
 from depccg.printer import print_
-from depccg.tokens import japanese_annotator, annotate_XX
+import depccg.tokens
 from depccg.combinator import (headfinal_combinator,
                                ja_forward_application,
                                ja_backward_application,
@@ -157,6 +157,47 @@ def dump_tree_ABCT(tree: dict, stream: typing.TextIO) -> typing.NoReturn:
     # === END IF ===
 # === END ===
 
+def annotate_using_janome(sentences, tokenize = False):
+    import janome.tokenizer as janome_token
+
+    user_dict_path: str = "/root/scripts/abc-dict.csv"
+    tokenizer = janome_token.Tokenizer(
+        udic = (
+            user_dict_path
+                if pathlib.Path(user_dict_path).is_file()
+                else ""
+        )
+    )
+
+    res = []
+    raw_sentences = []
+    for sentence in sentences:
+        sentence = ''.join(sentence)
+        tokenized = tokenizer.tokenize(sentence)
+        tokens = []
+
+        for token in tokenized:
+            pos, pos1, pos2, pos3 = token.part_of_speech.split(',')
+            token = depccg.tokens.Token(
+                word=token.surface,
+                surf=token.surface,
+                pos=pos,
+                pos1=pos1,
+                pos2=pos2,
+                pos3=pos3,
+                inflectionForm=token.infl_form,
+                inflectionType=token.infl_type,
+                reading=token.reading,
+                base=token.base_form
+            )
+            tokens.append(token)
+        raw_sentence = [token.surface for token in tokenized]
+        res.append(tokens)
+        raw_sentences.append(raw_sentence)
+
+    return res, raw_sentences
+# === END ===
+
 def main(args):
     # 使う組み合わせ規則 headfinal_combinatorでくるんでください。
     binary_rules = [
@@ -191,9 +232,9 @@ def main(args):
 
     # 単語分割にjanome使います。pip install janomeしてください。
     annotate_fun = (
-        japanese_annotator['janome'] 
-        if args.tokenize 
-        else annotate_XX
+        annotate_using_janome
+            if args.tokenize 
+            else annotate_XX
     )
 
     # パーザのオプション
