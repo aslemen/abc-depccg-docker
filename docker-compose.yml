@@ -5,17 +5,31 @@ services:
     image: abc-depccg
     runtime: nvidia # NOTE: version 3 does not support this option!
     volumes:
-      - ~/abc-depccg/source:/root/source
-      - ~/abc-depccg/result:/root/result
+      - type: bind
+        source: ~/abc-depccg-sources/current
+        target: /root/source
+        read_only: true
+      - &vol_abc-depccg-results
+        type: bind
+        source: ~/abc-depccg-results
+        target: /root/results
+      - &vol_abc-depccg-scripts
+        type: bind
+        source: ./abc-depccg/scripts
+        target: /root/scripts
+        read_only: true
     entrypoint:
-      - train
+      - python3
+      - /root/scripts/trainer.py
   abc-depccg-parse:
     build: ./abc-depccg
     image: abc-depccg
     runtime: nvidia
     volumes: 
-      - ~/abc-depccg/result:/root/result
+      - *vol_abc-depccg-results
+      - *vol_abc-depccg-scripts
     stdin_open: true
     tty: true
     entrypoint:
-      - parse
+      - python3
+      - /root/scripts/parser.py

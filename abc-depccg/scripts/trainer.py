@@ -378,7 +378,7 @@ if __name__ == "__main__":
     """
 
     FILE_TRAINER_SETTINGS: pathlib.Path = pathlib.Path(
-        "/root/supertagger.jsonnet"
+        "/root/scripts/supertagger.jsonnet"
     )
     """
         The path to the trainer settings.

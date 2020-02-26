@@ -71,8 +71,8 @@ ABC Treebankのパーザー
 
 |Path in VM|Path in Docker Containers|Availability|
 |----------|-------------------------|------------|
-|`~/abc-depccg/source`|`/root/source`|abc-depccg-train|
-|`~/abc-depccg/result`|`/root/result`|(BOTH)|
+|`~/abc-depccg-sources/current`|`/root/source`|abc-depccg-train|
+|`~/abc-depccg-results`|`/root/results`|(BOTH)|
 
 ## 学習
 ```sh
