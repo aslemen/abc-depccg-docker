@@ -401,10 +401,10 @@ if __name__ == "__main__":
     # ------
     DIR_RES: pathlib.Path = pathlib.Path("/root/result/")
 
-    DIR_OUTPUT: pathlib.Path = DIR_RES / datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+    DIR_OUTPUT: pathlib.Path = DIR_RES / datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
     while DIR_OUTPUT.exists():
-        DIR_OUTPUT: pathlib.Path = DIR_RES / datetime.datetime.now().strftime("%Y%m%d%H%M%S")
+        DIR_OUTPUT: pathlib.Path = DIR_RES / datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
     # === END ===
     DIR_OUTPUT.mkdir()
 
