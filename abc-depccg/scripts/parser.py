@@ -6,6 +6,7 @@ import argparse
 import sys
 import json
 import parsy
+import pathlib
 
 from depccg.parser import JapaneseCCGParser
 from depccg.printer import print_
@@ -216,10 +217,28 @@ def main(args):
         gpu = -1
     )
 
+    # model pathの検索
+    model_path_raw: pathlib.Path = pathlib.Path(args.model)
+    model_path: pathlib.Path
+
+    model_path_cand: pathlib.Path = pathlib.Path("/root/results") / model_path_raw
+    if (not model_path_raw.is_absolute()) and model_path_cand.is_dir():
+        model_path = model_path_cand
+    else:
+        model_path_cand = pathlib.Path(args.model)
+        if model_path_cand.is_dir():
+            model_path = model_path_cand
+        else:
+            raise FileNotFoundError()
+        # === END IF ===
+    # === END IF ===
+    
     # 設定ファイルとallennlpのモデルからパーザを初期化
+    model_path_str: str = str(model_path)
+
     parser = JapaneseCCGParser.from_json(
-        args.model + "/config_parser_abc.json", 
-        args.model + "/model", 
+        model_path_str + "/config_parser_abc.json", 
+        model_path_str + "/model", 
         **kwargs
     )
 

@@ -114,10 +114,14 @@ nvidia-smi
 ```sh
 cd ${ABC_DEPCCG_DOCKER_PATH}
 sudo docker-compose run abc-depccg-parse \
-    --model /root/result/${ABC_DEPCCG_DOCKER_RES_LATEST_TIMESTAMP} \
+    --model ${ABC_DEPCCG_DOCKER_RES_LATEST_TIMESTAMP} \
     --input "何 か の 文"
 ```
 
+引数 `--model` は，モデルのあるフォルダを指定するもの（必須）ですが，
+    まずはホスト上の`~/abc-depccg-results/`にあるフォルダを探し，
+    該当のフォルダがなければ，通常のパスとして扱います．
+    
 バッチパージングをするためには，解析する文を（改行区切りで）何らかのファイルに保存した上で，
 そのファイルの内容をパイプに流すことをする．
 ```sh
