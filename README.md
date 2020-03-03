@@ -131,3 +131,11 @@ cat <files> | sudo docker-compose run abc-depccg-parse ...
 他のオプション：
 - `--format/-f <format>`：出力フォーマット
 - `--tokenize`：形態素解析を前処理として行う
+
+## TIPS
+### CSVファイルから特定の列を抽出
+テスト文が入っているcsvファイルから，テスト文だけを抽出したいときに使う．
+
+```sh
+cat <file>.csv | cut -d "," -f <row_num>
+```
