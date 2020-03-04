@@ -399,7 +399,7 @@ if __name__ == "__main__":
     # ------
     # 0. Construct the output folder
     # ------
-    DIR_RES: pathlib.Path = pathlib.Path("/root/result/")
+    DIR_RES: pathlib.Path = pathlib.Path("/root/results/")
 
     DIR_OUTPUT: pathlib.Path = DIR_RES / datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
 
