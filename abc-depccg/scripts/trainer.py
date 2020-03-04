@@ -86,7 +86,7 @@ def parse_mod_unary_line(line: str) -> typing.List[str]:
 # === END ===
 
 CAT_CLAUSES: typing.Set[str] = {
-    "S", "S[m]", "S[a]", "S[e]", "S[sub]", 
+    "S[m]", "S[a]", "S[e]", "S[sub]", 
     "S[imp]", "S[smc]", "S[nml]", "S[rel]",
     "CP[t]", "CP[q]", "CP[x]", "CP[f]", "multi-sentence"
 }
