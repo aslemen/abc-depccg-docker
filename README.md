@@ -133,7 +133,7 @@ sudo ABC_DEPCCG_RESULTS=(some path) docker-compose run abc-depccg-parse \
 バッチパージングをするためには，解析する文を（改行区切りで）何らかのファイルに保存した上で，
 そのファイルの内容をパイプに流すことをする．
 ```sh
-cat <files> | sudo docker-compose run abc-depccg-parse ...
+cat <files> | sudo ABC_DEPCCG_RESULTS=(some path) docker-compose run abc-depccg-parse ...
 ```
 
 他のオプション：
