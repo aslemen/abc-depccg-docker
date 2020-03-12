@@ -71,15 +71,23 @@ ABC Treebankのパーザー
 
 |Path in VM|Path in Docker Containers|Availability|
 |----------|-------------------------|------------|
-|`~/abc-depccg-sources/current`|`/root/source`|abc-depccg-train|
-|`~/abc-depccg-results`|`/root/results`|(BOTH)|
+|`${ABC_DEPCCG_SOURCES_CURRENT}`|`/root/source`|abc-depccg-train|
+|`${ABC_DEPCCG_RESULTS}`|`/root/results`|(BOTH)|
+
+環境変数を予め設定しておくこと．
+なお，2020年3月時点で利用しているAzure VMでは，以下のような設定である：
+
+```sh
+ABC_DEPCCG_SOURCES_CURRENT=~/abc-depccg-sources/current
+ABC_DEPCCG_RESULTS=~/abc-depccg-results
+```
 
 ## 学習
 ```sh
 cd ${ABC_DEPCCG_DOCKER_PATH}
-sudo docker-compose run -d abc-depccg-train
+sudo ABC_DEPCCG_SOURCES_CURRENT=(some path) ABC_DEPCCG_RESULTS=(some path)  docker-compose run -d abc-depccg-train
 ```
-
+A
 コンテナID
 （`${ABC_DEPCCG_DOCKER_CONTID}`と呼ぶこととする）
 がSTDOUTに出力され，学習がバックグラウンドで開始される．
@@ -113,7 +121,7 @@ nvidia-smi
 学習で得られたモデルを用いてパージングを試すには，
 ```sh
 cd ${ABC_DEPCCG_DOCKER_PATH}
-sudo docker-compose run abc-depccg-parse \
+sudo ABC_DEPCCG_RESULTS=(some path) docker-compose run abc-depccg-parse \
     --model ${ABC_DEPCCG_DOCKER_RES_LATEST_TIMESTAMP} \
     --input "何 か の 文"
 ```

@@ -6,12 +6,12 @@ services:
     runtime: nvidia # NOTE: version 3 does not support this option!
     volumes:
       - type: bind
-        source: ~/abc-depccg-sources/current
+        source: ${ABC_DEPCCG_SOURCES_CURRENT}
         target: /root/source
         read_only: true
       - &vol_abc-depccg-results
         type: bind
-        source: ~/abc-depccg-results
+        source: ${ABC_DEPCCG_RESULTS}
         target: /root/results
       - &vol_abc-depccg-scripts
         type: bind
