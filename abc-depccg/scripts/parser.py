@@ -4,6 +4,7 @@ import typing
 
 import argparse
 import sys
+import os
 import json
 import parsy
 import pathlib
@@ -151,7 +152,7 @@ def dump_tree_ABCT(tree: dict, stream: typing.TextIO) -> typing.NoReturn:
                 f"({cat} {tree['word']})"
             )
         else:
-            strem.write(
+            stream.write(
                 f"({cat} ERROR)"
             )
     # === END IF ===
@@ -160,7 +161,7 @@ def dump_tree_ABCT(tree: dict, stream: typing.TextIO) -> typing.NoReturn:
 def annotate_using_janome(sentences, tokenize = False):
     import janome.tokenizer as janome_token
 
-    user_dict_path: str = "/root/scripts/abc-dict.csv"
+    user_dict_path: str = os.path.dirname(__file__) + "/abc-dict.csv"
     tokenizer = janome_token.Tokenizer(
         udic = (
             user_dict_path
@@ -258,24 +259,51 @@ def main(args):
         gpu = -1
     )
 
-    # model pathの検索
-    model_path_raw: pathlib.Path = pathlib.Path(args.model)
-    model_path: pathlib.Path
+    # ------
+    # モデルへのパスの検索
+    # ------
 
-    model_path_cand: pathlib.Path = pathlib.Path("/root/results") / model_path_raw
-    if (not model_path_raw.is_absolute()) and model_path_cand.is_dir():
-        model_path = model_path_cand
+    def find_model_path(path_raw: typing.Union[str, pathlib.Path]) -> pathlib.Path:
+        model_path_raw: pathlib.Path = pathlib.Path(path_raw)
+
+        # 指定されたパスが相対パスであるのであれば，/root/resultsが省略されている可能性がある
+        if (not model_path_raw.is_absolute()):
+            model_path_abbr_root: pathlib.Path = pathlib.Path("/home/hayashi/results")
+
+            # model_path_abbr_cand: /root/results/ が省略されていると見なした場合のパス
+            model_path_abbr_cand: pathlib.Path = (
+                model_path_abbr_root / model_path_raw
+            )
+
+            try:
+                # そのパスが実在するのであれば
+                if model_path_abbr_cand.is_dir():
+                    sys.stderr.write(
+                        f"[Parser] Model found in {model_path_abbr_cand}\n" 
+                    )
+                    return model_path_abbr_cand
     else:
-        model_path_cand = pathlib.Path(args.model)
-        if model_path_cand.is_dir():
-            model_path = model_path_cand
+                    pass
+                # === END IF ===
+            # 例外が生じた場合は，エラーメッセージを表示だけして，次の手順にうつる．
+            except Exception as e:
+                sys.stderr.write(e.args)
+                sys.stderr.write(f"[Parser] Fail to find a model in '{model_path_abbr_cand}'. It will be treated as an non-abbreviated path.\n")
+            finally:
+                pass
+            # === END TRY ===
+        # === END IF ===
+
+        # /root/results/... でモデルが見つからなければ，通常通りの検索をする．
+        if model_path_raw.is_dir():
+            return model_path_raw
         else:
             raise FileNotFoundError()
         # === END IF ===
-    # === END IF ===
+    # === END ===
     
     # 設定ファイルとallennlpのモデルからパーザを初期化
-    model_path_str: str = str(model_path)
+    model_path_str: pathlib.Path = str(find_model_path(args.model))
 
     parser = JapaneseCCGParser.from_json(
         model_path_str + "/config_parser_abc.json", 
