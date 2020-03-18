@@ -40,7 +40,7 @@ ABC Treebankのパーザー
         <dt>単語ベクトル</dt>
         <dd><a herf="http://www.cl.ecei.tohoku.ac.jp/~m-suzuki/jawiki_vector/">日本語 Wikipedia エンティティベクトル</a>
         の最新版をダウンロード：
-        <code>${ABC_DEPCCG_DOCKER_PATH}/abc-depccg/vector-wiija.tar.bz2</code>
+        <code>${ABC_DEPCCG_DOCKER_PATH}/abc-depccg/vector-wikija.tar.bz2</code>
         <dt>ABC Treebank</dt>
         <dd>空範疇をunary branchingにしたABC Treebankを適当に生成し，
             適当にアップロード：
