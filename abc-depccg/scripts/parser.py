@@ -90,26 +90,7 @@ def pCAT_PAR():
     return cat
 # === END ===
 
-pCAT = pCAT_COMP_LEFT 
-
-def parse_cat(text: str) -> dict:
-    return pCAT.parse(text)
-# === END ===
-
-def translate_cat_TLG(cat: dict) -> str:
-    input_type = cat["type"]
-    if input_type == "L":
-        return f"<{cat['antecedent']}\{cat['consequence']}>"
-    elif input_type == "R":
-        return f"<{cat['consequence']}/{cat['antecedent']}"
-    else:
-        return cat["lit"]
-    # === END IF ===
-# === END ===
-
-def parse_cat_translate_TLG(text: str) -> str:
-    return translate_cat_TLG(parse_cat(text))
-# === END ===
+pCAT = pCAT_COMP_LEFT
 
 def parse_cat(text: str) -> dict:
     return pCAT.parse(text)
@@ -160,7 +141,7 @@ def dump_tree_ABCT(tree: dict, stream: typing.TextIO) -> typing.NoReturn:
 
 def annotate_using_janome(sentences, tokenize = False):
     import janome.tokenizer as janome_token
-
+    
     user_dict_path: str = os.path.dirname(__file__) + "/abc-dict.csv"
     tokenizer = janome_token.Tokenizer(
         udic = (
@@ -235,7 +216,7 @@ def main(args):
     annotate_fun = (
         annotate_using_janome
             if args.tokenize 
-            else annotate_XX
+            else depccg.tokens.annotate_XX
     )
 
     # パーザのオプション
@@ -262,7 +243,7 @@ def main(args):
     # ------
     # モデルへのパスの検索
     # ------
-
+    
     def find_model_path(path_raw: typing.Union[str, pathlib.Path]) -> pathlib.Path:
         model_path_raw: pathlib.Path = pathlib.Path(path_raw)
 
@@ -282,7 +263,7 @@ def main(args):
                         f"[Parser] Model found in {model_path_abbr_cand}\n" 
                     )
                     return model_path_abbr_cand
-    else:
+                else:
                     pass
                 # === END IF ===
             # 例外が生じた場合は，エラーメッセージを表示だけして，次の手順にうつる．
@@ -301,13 +282,13 @@ def main(args):
             raise FileNotFoundError()
         # === END IF ===
     # === END ===
-    
+
     # 設定ファイルとallennlpのモデルからパーザを初期化
     model_path_str: pathlib.Path = str(find_model_path(args.model))
 
     parser = JapaneseCCGParser.from_json(
         model_path_str + "/config_parser_abc.json", 
-        model_path_str + "/model", 
+        model_path_str + "/model",
         **kwargs
     )
 
@@ -345,8 +326,6 @@ def main(args):
         
     # 木を出力
     if args.format == "abct":
-        parsed_trees_formatted_list = []
-
         for i, (parsed, tokens) in enumerate(zip(parsed_trees, tagged_doc), 1):
             for tree, prob in parsed:
                 tree_enh = {
