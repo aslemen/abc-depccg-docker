@@ -2,10 +2,13 @@
 
 import typing
 
+from collections import namedtuple
+import itertools
 import argparse
 import sys
 import os
 import json
+import re
 import parsy
 import pathlib
 
@@ -282,6 +285,276 @@ def dump_tree_ABCT(tree: dict, stream: typing.TextIO) -> typing.NoReturn:
 # =======
 # 3. Janome Tokenizers
 # ======
+JanomeLexEntry = namedtuple(
+    "JanomeLexEntry",
+    (
+        "surface", "left_id", "right_id", "cost",
+        "part_of_speech",
+        "infl_type", "infl_form", "base_form", "reading", "phonetic"
+    )
+)
+
+def generate_janome_userdic(
+    dic: typing.List[typing.Tuple[typing.Any]]
+) -> typing.Set[JanomeLexEntry]:
+    # ------
+    # collecting heads
+    # ------
+    # -- はず（名詞，非自立）
+    entries_hazu = [
+        JanomeLexEntry(*e)
+        for e in dic
+        if re.match(r"^(はず|ハズ|筈)$", e[7]) and re.match(r"名詞,非自立", e[4])
+    ]
+
+    # -- か（終助詞）
+    entries_ka = [
+        JanomeLexEntry(*e)
+        for e in dic
+        if re.match(r"^か$", e[7])
+    ]
+
+    # -- ない（形容詞）
+    entries_nai_adj = [
+        JanomeLexEntry(*e) 
+        for e in dic
+        if re.match(r"^(ない|無い)$", e[7]) and re.match(r"形容詞", e[4])
+    ]
+
+    # -- ない（助動詞）
+    # -- ん（助動詞）
+    entries_nai_aux = [
+        JanomeLexEntry(*e)
+        for e in dic
+        if (
+            re.match(r"ん", e[7]) 
+            or (re.match(r"^ない$", e[7]) and re.match(r"助動詞", e[4]))
+        )
+    ]
+
+    # -- ある（自立動詞）
+    entries_aru = [
+        JanomeLexEntry(*e)
+        for e in dic
+        if re.match(r"^(ある|有る)$", e[7]) and re.match(r"動詞,自立", e[4])
+    ]
+
+    # ------
+    # generating entries
+    # ------
+    res: typing.Set[JanomeLexEntry] = set()
+
+    # -- はずがない・ある
+    res.update(
+        head._replace(
+            surface = (
+                hazu.surface 
+                + case["surface"] 
+                + head.surface
+            ),
+            left_id = hazu.left_id,
+            # right_id = ,
+            cost = head.cost - 10000,
+            #pos_major = ,
+            #pos_minor1 = ,
+            #pos_minor2 = ,
+            #pos_minor3 = ,
+            #infl_type = ,
+            #infl_form =, 
+            base_form = (
+                hazu.base_form 
+                + case["base_form"] 
+                + head.base_form
+            ), 
+            reading = (
+                hazu.reading 
+                + case["reading"] 
+                + head.reading
+            ), 
+            phonetic = (
+                hazu.phonetic 
+                + case["phonetic"] 
+                + head.phonetic
+            )
+        )
+        for hazu in entries_hazu
+        for case in [
+            {
+                "surface": s,
+                "base_form": s,
+                "reading": r,
+                "phonetic": p
+            } for s, r, p in (
+                ("が", "ガ", "ガ"), ("ガ", "ガ", "ガ"),
+                ("は", "ハ", "ワ"), ("ハ", "ハ", "ワ"),
+                ("も", "モ", "モ"), ("モ", "モ", "モ"),
+                ("の", "ノ", "ノ"), ("ノ", "ノ", "ノ"),
+            )
+        ]
+        for head in itertools.chain(entries_nai_adj, entries_aru)
+    )
+
+    # -- かもしれない
+    res.update(
+        head._replace(
+            surface = (
+                ka.surface 
+                + case["surface"] 
+                + head.surface
+            ),
+            left_id = ka.left_id,
+            # right_id = ,
+            cost = head.cost - 10000,
+            #pos_major = ,
+            #pos_minor1 = ,
+            #pos_minor2 = ,
+            #pos_minor3 = ,
+            #infl_type = ,
+            #infl_form =, 
+            base_form = (
+                ka.base_form 
+                + case["base_form"] 
+                + head.base_form
+            ), 
+            reading = (
+                ka.reading 
+                + case["reading"] 
+                + head.reading
+            ), 
+            phonetic = (
+                ka.phonetic 
+                + case["phonetic"] 
+                + head.phonetic
+            )
+        )
+        for ka in entries_ka
+        for case in [
+            {
+                "surface": s,
+                "base_form": s,
+                "reading": "モシレ",
+                "phonetic": "モシレ"
+            } for s in (
+                "もしれ",
+                "モシレ",
+                "も知れ",
+                "モ知レ"
+            )
+        ]
+        for head in entries_nai_aux
+    )
+
+    def _iter_nakya(nai_entry: JanomeLexEntry) -> typing.Iterator[JanomeLexEntry]:
+        if re.match(r"仮定", nai_entry.part_of_speech):
+            if re.match(r"縮約", nai_entry.part_of_speech):
+                return (
+                    nai_entry._replace(
+                        surface = (
+                            nai_entry.surface 
+                            + ba["surface"]
+                        ),
+                        base_form = (
+                            nai_entry.base_form 
+                            + ba["base_form"] 
+                        ), 
+                        reading = (
+                            nai_entry.reading 
+                            + "バ"
+                        ), 
+                        phonetic = (
+                            nai_entry.phonetic 
+                            + "バ"
+                        )
+                    ) for ba in ("ば", "バ")
+                )
+            else:
+                yield nai_entry
+            # === END IF ===
+        elif re.match(r"基本", nai_entry.part_of_speech):
+            if re.match(r"縮約", nai_entry.part_of_speech):
+                return (
+                    nai_entry._replace(
+                        surface = (
+                            nai_entry.surface 
+                            + to["surface"]
+                        ),
+                        base_form = (
+                            nai_entry.base_form 
+                            + to["base_form"] 
+                        ), 
+                        reading = (
+                            nai_entry.reading 
+                            + "ト"
+                        ), 
+                        phonetic = (
+                            nai_entry.phonetic 
+                            + "ト"
+                        )
+                    ) for to in ("と", "ト")
+                )
+        else:
+            pass
+        # === END IF ===
+    # === END ===
+
+    # -- なければならない
+    res.update(
+        head._replace(
+            surface = (
+                nakere.surface 
+                + case["surface"] 
+                + head.surface
+            ),
+            left_id = ka.left_id,
+            # right_id = ,
+            cost = head.cost - 10000,
+            #pos_major = ,
+            #pos_minor1 = ,
+            #pos_minor2 = ,
+            #pos_minor3 = ,
+            #infl_type = ,
+            #infl_form =, 
+            base_form = (
+                nakere.base_form 
+                + case["base_form"] 
+                + head.base_form
+            ), 
+            reading = (
+                nakere.reading 
+                + case["reading"] 
+                + head.reading
+            ), 
+            phonetic = (
+                nakere.phonetic 
+                + case["phonetic"] 
+                + head.phonetic
+            )
+        )
+        for nakere in itertools.chain.from_iterable(
+            _iter_nakya(nai) for nai in entries_nai_aux
+        )
+        for case in [
+            {
+                "surface": s,
+                "base_form": s,
+                "reading": rp,
+                "phonetic": rp 
+            } for s, rp in (
+                ("なら", "ナラ"),
+                ("ナラ", "ナラ"),
+                ("成ら", "ナラ"),
+                ("成ラ", "ナラ"),
+                ("行ケ", "イケ"),
+                ("行け", "イケ"),
+                ("いけ", "イケ"),
+                ("イケ", "イケ"),
+            )
+        ]
+        for head in entries_nai_aux
+    )
+    return res
+# === END ===
+
 __Janome_Tokenizer: "janome.tokenizer.Tokenizer" = None
 
 def __init_janome_tokenizer():
@@ -294,17 +567,28 @@ def __init_janome_tokenizer():
 
 def __reset_janome_tokenizer():
     import janome.tokenizer
+    import janome.dic
+    from janome.sysdic import connections
+    import tempfile
     global __Janome_Tokenizer
     
-    user_dict_path: str = os.path.dirname(__file__) + "/abc-dict.csv"
-
-    __Janome_Tokenizer = janome.tokenizer.Tokenizer(
-        udic = (
-            user_dict_path
-                if pathlib.Path(user_dict_path).is_file()
-                else ""
-        )
+    __Janome_Tokenizer = janome.tokenizer.Tokenizer()
+    user_entries = generate_janome_userdic(
+        __Janome_Tokenizer.sys_dic.entries.values()
     )
+
+    with tempfile.NamedTemporaryFile(mode = "w") as user_dict_tf:
+        for entry in user_entries:
+            user_dict_tf.write(",".join(map(str, entry)))
+            user_dict_tf.write("\n")
+        # === END FOR entry ===
+
+        __Janome_Tokenizer.user_dic = janome.dic.UserDictionary(
+            user_dict_tf.name, 
+            "utf8", "ipadic",
+            connections
+        )
+    # === END WITH user_dict ===
 # === END ===
 
 def annotate_using_janome(sentences, tokenize = False):
