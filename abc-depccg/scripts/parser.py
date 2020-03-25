@@ -9,20 +9,7 @@ import json
 import parsy
 import pathlib
 
-from depccg.parser import JapaneseCCGParser
-from depccg.printer import print_
-import depccg.tokens
-from depccg.combinator import (headfinal_combinator,
-                               ja_forward_application,
-                               ja_backward_application,
-                               ja_generalized_forward_composition0,
-                               ja_generalized_backward_composition0,
-                               ja_generalized_backward_composition1,
-                               ja_generalized_backward_composition2,
-                               ja_generalized_backward_composition3,
-                               ja_generalized_forward_composition0,
-                               ja_generalized_forward_composition1,
-                               ja_generalized_forward_composition2)
+# ======
 
 pCAT_BASE_trans_table = (
     str.maketrans(
@@ -150,6 +137,7 @@ def annotate_using_janome(sentences, tokenize = False):
                 else ""
         )
     )
+    import depccg.tokens
 
     res = []
     raw_sentences = []
@@ -181,35 +169,44 @@ def annotate_using_janome(sentences, tokenize = False):
 # === END ===
 
 def main(args):
+    from depccg.parser import JapaneseCCGParser
+    from depccg.printer import print_
+    import depccg.tokens
+    from depccg.combinator import (
+        HeadfinalCombinator,
+        JaForwardApplication,
+        JaBackwardApplication,
+        JaGeneralizedForwardComposition0,
+        # JaGeneralizedForwardComposition1,
+        # JaGeneralizedForwardComposition2,
+        JaGeneralizedBackwardComposition0,
+        JaGeneralizedBackwardComposition1,
+        JaGeneralizedBackwardComposition2,
+        JaGeneralizedBackwardComposition3,
+    )
+
     # 使う組み合わせ規則 headfinal_combinatorでくるんでください。
     binary_rules = [
-        headfinal_combinator(ja_forward_application()),# 順方向関数適用
-        headfinal_combinator(ja_backward_application()),# 逆方向関数適用
-        headfinal_combinator(
-            ja_generalized_forward_composition0(
+        HeadfinalCombinator(r) 
+        for r in {
+            JaForwardApplication(),             # 順方向関数適用
+            JaBackwardApplication(),            # 逆方向関数適用
+            JaGeneralizedForwardComposition0(   # 順方向関数合成 X/Y Y/Z -> X/Z
                 '/', '/', '/', '>B'
-            )
-        ),     # 順方向関数合成 X/Y Y/Z -> X/Z
-        headfinal_combinator(
-            ja_generalized_backward_composition0(
+            ),
+            JaGeneralizedBackwardComposition0(  # Y\Z X\Y -> X\Z
                 '\\', '\\', '\\', '<B1'
-            )
-        ),  # Y\Z X\Y -> X\Z
-        headfinal_combinator(
-            ja_generalized_backward_composition1(
+            ),
+            JaGeneralizedBackwardComposition1(  # (X\Y)|Z W\X --> (W\Y)|Z
                 '\\', '\\', '\\', '<B2'
-            )
-        ),  # (X\Y)|Z W\X --> (W\Y)|Z
-        headfinal_combinator(
-            ja_generalized_backward_composition2(
+            ),
+            JaGeneralizedBackwardComposition2(  # ((X\Y)|Z)|W U\X --> ((U\Y)|Z)|W
                 '\\', '\\', '\\', '<B3'
-            )
-        ),  # ((X\Y)|Z)|W U\X --> ((U\Y)|Z)|W
-        headfinal_combinator(
-            ja_generalized_backward_composition3(
+            ),
+            JaGeneralizedBackwardComposition3(  # (((X\Y)|Z)|W)|U S\X --> (((S\Y)|Z)|W)|U
                 '\\', '\\', '\\', '<B4'
-            )
-        ),  # (((X\Y)|Z)|W)|U S\X --> (((S\Y)|Z)|W)|U
+            ),
+        }
     ]
 
     # 単語分割にjanome使います。pip install janomeしてください。
