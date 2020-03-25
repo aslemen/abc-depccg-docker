@@ -10,8 +10,18 @@ import parsy
 import pathlib
 
 # ======
+# 1. Category Parser and Translators
+# ======
+"""
+A tranalation table that translates atomic categories in the depccg format
+    to those in the ABC Treebank format.
+In fact, what this does is just get rid of brackets.
 
-pCAT_BASE_trans_table = (
+Examples
+--------
+"S[m]" -> "Sm"
+"""
+pCAT_BASE_trans_table: typing.Dict[int, str] = (
     str.maketrans(
         {
             "[": "",
@@ -22,6 +32,15 @@ pCAT_BASE_trans_table = (
 
 @parsy.generate
 def pCAT_BASE():
+    """
+    A parsy parser and translator of atomic depccg categories 
+        into abstract representations of CG categories.
+
+    Examples
+    --------
+    "S[m]" -> {"type": "BASE", "lit": "Sm"}
+    """
+
     cat = yield parsy.regex(r"[^()\\/]+")
 
     return {
@@ -32,6 +51,32 @@ def pCAT_BASE():
 
 @parsy.generate
 def pCAT_COMP_LEFT():
+    """
+    A parsy parser and translator of left-functor depccg categories 
+        into abstract representations of CG categories.
+
+    Examples
+    --------
+    "S[m]\\PP[s]\\PP[o]" -> 
+    {
+        "type": "L", 
+        "antecedent": {
+                "type": "Base",
+                "lit": "PPo",
+            }, 
+        "consequence": {
+            "type": "L":
+            "antecedent": {
+                "type": "Base",
+                "lit": "PPs",
+            }, 
+            "consequence": {
+                "type": "Base",
+                "lit": "Sm",
+            }, 
+        }
+    """
+
     cat1 = yield pCAT_COMP_RIGHT 
     cat_others = yield (
         parsy.match_item("\\") 
@@ -52,6 +97,32 @@ def pCAT_COMP_LEFT():
 
 @parsy.generate
 def pCAT_COMP_RIGHT():
+    """
+    A parsy parser and translator of right-functor depccg categories 
+        into abstract representations of CG categories.
+
+    Examples
+    --------
+    "S[m]/PP[s]/PP[o]" -> 
+    {
+        "type": "R", 
+        "antecedent": {
+                "type": "Base",
+                "lit": "PPo",
+            }, 
+        "consequence": {
+            "type": "R":
+            "antecedent": {
+                "type": "Base",
+                "lit": "PPs",
+            }, 
+            "consequence": {
+                "type": "Base",
+                "lit": "Sm",
+            }, 
+        }
+    """
+
     cat1 = yield pCAT_BASE | pCAT_PAR
     cat_others = yield (
         parsy.match_item("/") 
@@ -70,6 +141,11 @@ def pCAT_COMP_RIGHT():
 
 @parsy.generate
 def pCAT_PAR():
+    """
+    A parsy parser and translator of parenthesized depccg categories 
+        into abstract representations of CG categories.
+    """
+
     yield parsy.match_item("(")
     cat = yield pCAT
     yield parsy.match_item(")")
@@ -77,13 +153,64 @@ def pCAT_PAR():
     return cat
 # === END ===
 
+"""
+The root paraser and translator of any depccg categories 
+    into abstract representations of CG categories.
+"""
 pCAT = pCAT_COMP_LEFT
 
 def parse_cat(text: str) -> dict:
+    """
+    Parse powered by parsy an depccg category and translate it into an abstract representation for CG categories.
+
+    Parameters
+    ----------
+    text : str
+        A string representation of an depccg category.
+    
+    Returns
+    -------
+    res : dict
+        An abstract representation of the given input.
+
+    Examples
+    --------
+    >>> parse_cat("(S[m]/S[m])/(S[p]\\PP[s]\\PP[o])")
+    {'type': 'R',
+        'antecedent': {'type': 'L',
+            'antecedent': {'type': 'BASE', 'lit': 'PPo'},
+            'consequence': {'type': 'L',
+                'antecedent': {'type': 'BASE', 'lit': 'PPs'},
+                'consequence': {'type': 'BASE', 'lit': 'Sp'}}},
+        'consequence': {'type': 'R',
+            'antecedent': {'type': 'BASE', 'lit': 'Sm'},
+            'consequence': {'type': 'BASE', 'lit': 'Sm'}}}
+    """
+
     return pCAT.parse(text)
 # === END ===
 
 def translate_cat_TLG(cat: dict) -> str:
+    """
+    Print an abstract representation of a CG category in the ABC Treebank format.
+
+    Parameters
+    ----------
+    cat : dict
+        An abstract representation of a CG category.
+    
+    Returns
+    -------
+    res : str
+        A string representation in the ABC Treebank format.
+
+
+    Examples
+    --------
+    >>> translate_cat_TLG(parse_cat("(S[m]/S[m])/(S[p]\\PP[s]\\PP[o])"))
+    '<<Sm/Sm>/<PPo\\<PPs\\Sp>>>'
+    """
+
     input_type = cat["type"]
     if input_type == "L":
         return f"<{translate_cat_TLG(cat['antecedent'])}\{translate_cat_TLG(cat['consequence'])}>"
@@ -95,9 +222,35 @@ def translate_cat_TLG(cat: dict) -> str:
 # === END ===
 
 def parse_cat_translate_TLG(text: str):
+    """
+    Print an abstract representation of a CG category in the ABC Treebank format.
+
+    Parameters
+    ----------
+    text : str
+        A string representation of an depccg category.
+    
+    Returns
+    -------
+    res : str
+        A string representation in the ABC Treebank format.
+
+    Examples
+    --------
+    >>> parse_cat_translate_TLG("(S[m]/S[m])/(S[p]\\PP[s]\\PP[o])"))
+    '<<Sm/Sm>/<PPo\\<PPs\\Sp>>>'
+
+    Notes
+    --------
+    parse_cat_translate_TLG(str) == translate_cat_TLG(parse_cat(str))
+
+    """
     return translate_cat_TLG(parse_cat(text))
 # === END ===
 
+# ======
+# 2. Tree formatters
+# ======
 def dump_tree_ABCT(tree: dict, stream: typing.TextIO) -> typing.NoReturn:
     cat = parse_cat_translate_TLG(tree["cat"])
 
@@ -126,24 +279,44 @@ def dump_tree_ABCT(tree: dict, stream: typing.TextIO) -> typing.NoReturn:
     # === END IF ===
 # === END ===
 
-def annotate_using_janome(sentences, tokenize = False):
-    import janome.tokenizer as janome_token
+# =======
+# 3. Janome Tokenizers
+# ======
+__Janome_Tokenizer: "janome.tokenizer.Tokenizer" = None
+
+def __init_janome_tokenizer():
+    if __Janome_Tokenizer:
+        pass
+    else:
+        __reset_janome_tokenizer()
+    # === END IF ===
+# === END ===
+
+def __reset_janome_tokenizer():
+    import janome.tokenizer
+    global __Janome_Tokenizer
     
     user_dict_path: str = os.path.dirname(__file__) + "/abc-dict.csv"
-    tokenizer = janome_token.Tokenizer(
+
+    __Janome_Tokenizer = janome.tokenizer.Tokenizer(
         udic = (
             user_dict_path
                 if pathlib.Path(user_dict_path).is_file()
                 else ""
         )
     )
+# === END ===
+
+def annotate_using_janome(sentences, tokenize = False):
     import depccg.tokens
+    
+    __init_janome_tokenizer()
 
     res = []
     raw_sentences = []
     for sentence in sentences:
         sentence = ''.join(sentence)
-        tokenized = tokenizer.tokenize(sentence)
+        tokenized = __Janome_Tokenizer.tokenize(sentence)
         tokens = []
 
         for token in tokenized:
@@ -349,6 +522,9 @@ def main(args):
     # === END IF ===
 # === END ===
 
+# ======
+# 4. Commandline wrappers
+# ======
 if __name__ == '__main__':
     parser = argparse.ArgumentParser('A* CCG parser')
     parser.set_defaults(func=lambda _: parser.print_help())
