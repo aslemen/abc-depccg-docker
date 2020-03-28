@@ -24,7 +24,6 @@ services:
   abc-depccg-parse:
     build: ./abc-depccg
     image: abc-depccg
-    runtime: nvidia
     volumes: 
       - *vol_abc-depccg-results
       - *vol_abc-depccg-scripts

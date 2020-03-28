@@ -703,7 +703,7 @@ def main(args):
 
         # 指定されたパスが相対パスであるのであれば，/root/resultsが省略されている可能性がある
         if (not model_path_raw.is_absolute()):
-            model_path_abbr_root: pathlib.Path = pathlib.Path("/home/hayashi/results")
+            model_path_abbr_root: pathlib.Path = pathlib.Path("/root/results")
 
             # model_path_abbr_cand: /root/results/ が省略されていると見なした場合のパス
             model_path_abbr_cand: pathlib.Path = (
